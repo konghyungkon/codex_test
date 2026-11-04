@@ -6,6 +6,7 @@ import sqlite3
 import sys
 import threading
 import webbrowser
+from contextlib import contextmanager
 from functools import partial
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -15,11 +16,16 @@ DATA_ROOT = (Path(os.environ.get('LOCALAPPDATA', str(Path.home()))) / 'SimpleTod
              if getattr(sys, 'frozen', False) else ROOT / 'data')
 
 
+@contextmanager
 def connect(database):
     db = sqlite3.connect(database)
-    db.row_factory = sqlite3.Row
-    db.execute('CREATE TABLE IF NOT EXISTS todos (id INTEGER PRIMARY KEY, title TEXT NOT NULL, completed INTEGER NOT NULL DEFAULT 0)')
-    return db
+    try:
+        db.row_factory = sqlite3.Row
+        with db:
+            db.execute('CREATE TABLE IF NOT EXISTS todos (id INTEGER PRIMARY KEY, title TEXT NOT NULL, completed INTEGER NOT NULL DEFAULT 0)')
+            yield db
+    finally:
+        db.close()
 
 
 class Handler(BaseHTTPRequestHandler):
