@@ -1,0 +1,41 @@
+name: Windows executable
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m unittest discover -s tests -v
+      - run: python -m pip install pyinstaller==6.16.0
+      - run: python -m PyInstaller --onefile --name SimpleTodo --add-data "static;static" app.py
+      - name: Verify packaged app
+        shell: pwsh
+        run: |
+          $db = Join-Path $env:RUNNER_TEMP 'smoke.db'
+          $process = Start-Process dist/SimpleTodo.exe -ArgumentList '--port', '18765', '--db', $db -PassThru
+          try {
+            $ready = $false
+            for ($i = 0; $i -lt 30; $i++) {
+              try {
+                $page = Invoke-WebRequest http://127.0.0.1:18765/ -UseBasicParsing
+                if ($page.StatusCode -eq 200) { $ready = $true; break }
+              } catch { Start-Sleep -Seconds 1 }
+            }
+            if (-not $ready) { throw 'Packaged server did not start' }
+            $body = @{ title = 'Windows smoke test' } | ConvertTo-Json
+            Invoke-RestMethod http://127.0.0.1:18765/api/todos -Method Post -ContentType 'application/json' -Body $body
+            $todos = Invoke-RestMethod http://127.0.0.1:18765/api/todos
+            if ($todos[0].title -ne 'Windows smoke test') { throw 'Todo persistence failed' }
+          } finally { Stop-Process -Id $process.Id -ErrorAction SilentlyContinue }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SimpleTodo-Windows
+          path: dist/SimpleTodo.exe

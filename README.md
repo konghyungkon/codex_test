@@ -1,5 +1,15 @@
 # 오늘의 할 일
 
+## Windows: Python 설치 없이 실행
+
+GitHub의 Actions → Windows executable → 성공한 실행 → Artifacts에서
+`SimpleTodo-Windows`를 다운로드하고 ZIP 압축을 푼 뒤 `SimpleTodo.exe`를 실행하세요.
+브라우저가 자동으로 열립니다. 실행 중 콘솔 창을 유지하고 종료할 때 창을 닫으세요.
+할 일은 `%LOCALAPPDATA%\SimpleTodo\todos.db`에 보관됩니다.
+실행 파일은 코드 서명이 없으므로 Windows가 경고를 표시할 수 있습니다.
+
+## Python으로 개발
+
 Python 3.10 이상으로 실행하는 개인용 할 일 웹앱입니다. 외부 패키지 설치가 필요 없습니다.
 
 ```bash

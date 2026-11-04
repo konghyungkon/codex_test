@@ -1,12 +1,18 @@
 """A small, single-user todo app using only Python's standard library."""
 import argparse
 import json
+import os
 import sqlite3
+import sys
+import threading
+import webbrowser
 from functools import partial
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
+DATA_ROOT = (Path(os.environ.get('LOCALAPPDATA', str(Path.home()))) / 'SimpleTodo'
+             if getattr(sys, 'frozen', False) else ROOT / 'data')
 
 
 def connect(database):
@@ -84,7 +90,7 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def create_server(host='127.0.0.1', port=8000, database=None):
-    database = Path(database) if database else ROOT / 'data/todos.db'
+    database = Path(database) if database else DATA_ROOT / 'todos.db'
     database.parent.mkdir(parents=True, exist_ok=True)
     with connect(database):
         pass
@@ -94,11 +100,13 @@ def create_server(host='127.0.0.1', port=8000, database=None):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--host', default='127.0.0.1')
-    parser.add_argument('--port', type=int, default=8000)
+    parser.add_argument('--port', type=int, default=0 if getattr(sys, 'frozen', False) else 8000)
     parser.add_argument('--db', type=Path)
     args = parser.parse_args()
     server = create_server(args.host, args.port, args.db)
     print(f'할 일 앱 실행: http://{args.host}:{server.server_port}', flush=True)
+    if getattr(sys, 'frozen', False):
+        threading.Timer(0.5, webbrowser.open, args=(f'http://127.0.0.1:{server.server_port}',)).start()
     try:
         server.serve_forever()
     except KeyboardInterrupt:
